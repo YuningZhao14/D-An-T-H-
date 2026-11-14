@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Vườn Chữ 2.0 — Đọc Truyện Tiếng Hàn & Trồng Cây PWA</title>
+    <!-- PWA Manifest & Meta -->
+    <meta name="theme-color" content="#121316">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://placehold.co/192x192/10b981/ffffff?text=VC">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&family=Noto+Sans+KR:wght@300;400;500;700&family=Noto+Serif+KR:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        ui: ['"Be Vietnam Pro"', 'sans-serif'],
+                        krSans: ['"Noto Sans KR"', 'sans-serif'],
+                        krSerif: ['"Noto Serif KR"', 'serif'],
+                        krBatang: ['"Gowun Batang"', 'serif'],
+                        krDodum: ['"Gowun Dodum"', 'sans-serif'],
+                    },
+                },
+            },
+        };
+    </script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            overscroll-behavior-y: none;
+        }
+
+        /* Giao diện màu trang đọc */
+        .theme-dark {
+            --bg-app: #121316;
+            --bg-surface: #1b1d22;
+            --bg-elevated: #24272f;
+            --border-subtle: #2e323c;
+            --text-main: #e6e4df;
+            --text-muted: #9ca3af;
+            --accent: #34d399;
+            --word-hover: rgba(52, 211, 153, 0.18);
+            --word-active: rgba(52, 211, 153, 0.35);
+            --word-saved: rgba(251, 191, 36, 0.18);
+        }
+
+        .theme-sepia {
+            --bg-app: #f4ecd8;
+            --bg-surface: #fbf6e9;
+            --bg-elevated: #efe4ca;
+            --border-subtle: #dfd2b5;
+            --text-main: #3b3226;
+            --text-muted: #786a56;
+            --accent: #059669;
+            --word-hover: rgba(5, 150, 105, 0.14);
+            --word-active: rgba(5, 150, 105, 0.28);
+            --word-saved: rgba(217, 119, 6, 0.18);
+        }
+
+        .theme-green {
+            --bg-app: #e4efe7;
+            --bg-surface: #eff6f1;
+            --bg-elevated: #d6e6dc;
+            --border-subtle: #bfd6c7;
+            --text-main: #1f3328;
+            --text-muted: #4f6b5b;
+            --accent: #047857;
+            --word-hover: rgba(4, 120, 87, 0.14);
+            --word-active: rgba(4, 120, 87, 0.26);
+            --word-saved: rgba(217, 119, 6, 0.18);
+        }
+
+        .theme-light {
+            --bg-app: #f8fafc;
+            --bg-surface: #ffffff;
+            --bg-elevated: #f1f5f9;
+            --border-subtle: #e2e8f0;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --accent: #10b981;
+            --word-hover: rgba(16, 185, 129, 0.15);
+            --word-active: rgba(16, 185, 129, 0.28);
+            --word-saved: rgba(245, 158, 11, 0.15);
+        }
+
+        .app-bg { background-color: var(--bg-app); color: var(--text-main); }
+        .surface-bg { background-color: var(--bg-surface); border-color: var(--border-subtle); }
+        .elevated-bg { background-color: var(--bg-elevated); border-color: var(--border-subtle); }
+        .subtle-border { border-color: var(--border-subtle); }
+        .muted-text { color: var(--text-muted); }
+
+        /* Từ tiếng Hàn tương tác */
+        .kr-word {
+            cursor: pointer;
+            border-radius: 6px;
+            padding: 1px 3px;
+            margin: 0 -1px;
+            transition: background-color 0.15s ease, transform 0.1s ease;
+            display: inline;
+        }
+        .kr-word:hover { background-color: var(--word-hover); }
+        .kr-word.active-word {
+            background-color: var(--word-active);
+            outline: 1.5px solid var(--accent);
+        }
+        .kr-word.looked-up { border-bottom: 1.5px dashed rgba(52, 211, 153, 0.6); }
+        .kr-word.has-note { background-color: var(--word-saved); border-bottom: 2px solid #f59e0b; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.3); border-radius: 999px; }
+
+        @keyframes plantSway {
+            0%, 100% { transform: rotate(-1.5deg); }
+            50% { transform: rotate(1.5deg); }
+        }
+        .plant-sway { transform-origin: bottom center; animation: plantSway 4s ease-in-out infinite; }
+    </style>
+</head>
+<body class="theme-dark app-bg min-h-screen flex flex-col selection:bg-emerald-500/30 pb-20 sm:pb-0">
+
+    <!-- TOP APP BAR -->
+    <header class="sticky top-0 z-30 surface-bg border-b subtle-border backdrop-blur-md bg-opacity-95 px-4 h-14 flex items-center justify-between">
+        <div class="flex items-center gap-2.5 min-w-0">
+            <div class="w-8 h-8 rounded-xl bg-emerald-600 flex items-center justify-center text-white shrink-0 shadow-sm">
+                <i data-lucide="sprout" class="w-4 h-4"></i>
+            </div>
+            <div class="min-w-0">
+                <h1 id="headerStoryTitle" class="text-xs sm:text-sm font-bold truncate max-w-[160px] sm:max-w-xs">
+                    Vườn Chữ 2.0
+                </h1>
+                <p class="text-[10px] muted-text truncate">PWA Đọc Truyện & Học Từ Vựng</p>
+            </div>
+        </div>
+
+        <!-- Resources Pill & PWA Install Button -->
+        <div class="flex items-center gap-2">
+            <!-- PWA Install Button (ẩn nếu đã cài) -->
+            <button id="installPwaBtn" onclick="installPWA()" class="hidden px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-xs font-semibold items-center gap-1 shadow-sm">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i> Cài App
+            </button>
+
+            <!-- Nước & Mặt trời -->
+            <button onclick="switchTab('garden')" class="flex items-center gap-2 px-2.5 py-1 rounded-full elevated-bg border subtle-border text-xs font-semibold" title="Xem vườn cây">
+                <span class="flex items-center gap-0.5 text-sky-400">💧 <span id="waterCount">0</span></span>
+                <span class="opacity-30">|</span>
+                <span class="flex items-center gap-0.5 text-amber-400">☀️ <span id="sunCount">0</span></span>
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN VIEWS CONTAINER (TAB-BASED SPA) -->
+    <main class="flex-1 w-full max-w-3xl mx-auto px-4 py-6 relative">
+
+        <!-- ================= TAB 1: READ (ĐỌC TRUYỆN) ================= -->
+        <section id="viewRead" class="space-y-6">
+            <div class="pb-4 border-b subtle-border flex items-center justify-between gap-3">
+                <div>
+                    <span id="readCategoryBadge" class="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 mb-1">
+                        Truyện ngắn
+                    </span>
+                    <h2 id="articleMainTitle" class="text-xl sm:text-2xl font-bold font-krBatang leading-snug"></h2>
+                </div>
+                <div class="text-xs muted-text text-right shrink-0">
+                    <div>📖 <strong id="readProgressText" class="text-emerald-400">0%</strong></div>
+                    <div>🔖 <strong id="storyLookupCount">0</strong> từ đã tra</div>
+                </div>
+            </div>
+
+            <!-- Nội dung tiếng Hàn -->
+            <article id="readerContent" class="font-krBatang select-text break-keep pb-12 transition-all"></article>
+        </section>
+
+        <!-- ================= TAB 2: LIBRARY (THƯ VIỆN & TẢI FILE) ================= -->
+        <section id="viewLibrary" class="hidden space-y-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-lg font-bold">📚 Thư Viện Truyện & Tải Văn Bản</h2>
+                    <p class="text-xs muted-text">Tải file .txt/.md hoặc dán văn bản tiếng Hàn mới</p>
+                </div>
+                <span class="text-xs font-semibold px-2.5 py-1 rounded-full elevated-bg"><span id="libraryStoryCount">0</span> truyện</span>
+            </div>
+
+            <!-- Form thêm truyện / Tải file -->
+            <div class="p-4 rounded-2xl elevated-bg border subtle-border space-y-3">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-emerald-400">+ Thêm bài đọc / truyện mới</span>
+                    <label class="cursor-pointer px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition flex items-center gap-1.5">
+                        <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Tải file .txt
+                        <input type="file" id="storyFileInput" accept=".txt,.md" class="hidden" onchange="handleStoryFile(event)">
+                    </label>
+                </div>
+                <input type="text" id="newStoryTitle" placeholder="Tiêu đề truyện (VD: 어린 왕자 - Chương 1)..." class="w-full px-3 py-2 rounded-xl surface-bg border subtle-border text-xs outline-none focus:border-emerald-500">
+                <textarea id="newStoryContent" rows="4" placeholder="Dán văn bản tiếng Hàn vào đây..." class="w-full px-3 py-2 rounded-xl surface-bg border subtle-border text-xs font-krSans outline-none focus:border-emerald-500"></textarea>
+                <div class="flex justify-end">
+                    <button onclick="addNewStory()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition">
+                        Lưu & Đọc ngay
+                    </button>
+                </div>
+            </div>
+
+            <!-- Danh sách truyện đã lưu -->
+            <div id="storyListContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+        </section>
+
+        <!-- ================= TAB 3: GARDEN (VƯỜN CÂY 6 LOÀI) ================= -->
+        <section id="viewGarden" class="hidden space-y-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-lg font-bold">🌱 Vườn Cây Tri Thức</h2>
+                    <p class="text-xs muted-text">Đọc 5 phút = +1 💧 • Tra 10 từ = +1 ☀️</p>
+                </div>
+                <div class="flex items-center gap-2 text-xs font-bold">
+                    <span class="px-2.5 py-1 rounded-full bg-sky-500/20 text-sky-400">💧 <span id="gardenWaterCount">0</span></span>
+                    <span class="px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-400">☀️ <span id="gardenSunCount">0</span></span>
+                </div>
+            </div>
+
+            <!-- Cây đang chăm sóc -->
+            <div class="p-5 rounded-2xl elevated-bg border subtle-border grid grid-cols-1 md:grid-cols-2 gap-5 items-center">
+                <div class="flex flex-col items-center justify-center bg-gradient-to-b from-sky-950/20 to-emerald-950/30 rounded-2xl p-4 border subtle-border min-h-[220px] relative">
+                    <span id="plantStageBadge" class="absolute top-3 left-3 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-400">Giai đoạn 1/5</span>
+                    <div id="plantIllustration" class="w-36 h-36 flex items-end justify-center plant-sway"></div>
+                    <p id="plantStatusCaption" class="text-xs font-medium mt-2 text-center muted-text"></p>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <span class="text-[11px] font-bold text-emerald-400 uppercase tracking-wider" id="activePlantOrder">Cây #1 / 6</span>
+                        <h3 id="activePlantName" class="text-xl font-bold mt-0.5">Hoa Anh Thảo</h3>
+                        <p id="activePlantDesc" class="text-xs muted-text mt-1"></p>
+                    </div>
+
+                    <div class="space-y-3 text-xs">
+                        <div>
+                            <div class="flex justify-between font-semibold mb-1">
+                                <span class="text-sky-400">💧 Nước tưới</span>
+                                <span id="plantWaterText">0 / 5</span>
+                            </div>
+                            <div class="w-full h-2 rounded-full surface-bg overflow-hidden">
+                                <div id="plantWaterBar" class="h-full bg-sky-400 transition-all duration-300" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between font-semibold mb-1">
+                                <span class="text-amber-400">☀️ Hạt mặt trời</span>
+                                <span id="plantSunText">0 / 10</span>
+                            </div>
+                            <div class="w-full h-2 rounded-full surface-bg overflow-hidden">
+                                <div id="plantSunBar" class="h-full bg-amber-400 transition-all duration-300" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 pt-1">
+                        <button onclick="feedPlant('water')" id="btnWater" class="py-2 px-3 rounded-xl bg-sky-600 hover:bg-sky-500 disabled:opacity-40 text-white text-xs font-bold transition flex items-center justify-center gap-1">
+                            💧 Tưới (<span id="availWater">0</span>)
+                        </button>
+                        <button onclick="feedPlant('sun')" id="btnSun" class="py-2 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-gray-950 text-xs font-bold transition flex items-center justify-center gap-1">
+                            ☀️ Bón nắng (<span id="availSun">0</span>)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bộ sưu tập 6 cây -->
+            <div>
+                <h3 class="text-xs font-bold muted-text uppercase tracking-wider mb-3">Bộ sưu tập 6 loài cây học tập</h3>
+                <div id="plantCollectionGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5"></div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 4: MUSIC (TRÌNH PHÁT NHẠC CÁ NHÂN) ================= -->
+        <section id="viewMusic" class="hidden space-y-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-lg font-bold">🎵 Trình Phát Nhạc Cá Nhân</h2>
+                    <p class="text-xs muted-text">Tải nhạc yêu thích (.mp3, .wav) để nghe khi đọc truyện</p>
+                </div>
+                <label class="cursor-pointer px-3 py-1.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white text-xs font-semibold transition flex items-center gap-1.5">
+                    <i data-lucide="upload" class="w-3.5 h-3.5"></i> Thêm bài hát
+                    <input type="file" id="audioFileInput" accept="audio/*" multiple class="hidden" onchange="handleAudioFiles(event)">
+                </label>
+            </div>
+
+            <div class="p-6 rounded-2xl elevated-bg border subtle-border text-center space-y-4">
+                <div class="w-16 h-16 mx-auto rounded-full bg-pink-500/20 text-pink-400 flex items-center justify-center text-2xl animate-pulse">
+                    🎶
+                </div>
+                <div>
+                    <h3 id="currentTrackDisplay" class="font-bold text-sm truncate">Chưa có bài nhạc nào</h3>
+                    <p id="playlistInfo" class="text-xs muted-text mt-0.5">Danh sách phát trống</p>
+                </div>
+
+                <!-- Thanh tua nhạc -->
+                <div class="space-y-1">
+                    <div class="flex justify-between text-[11px] muted-text">
+                        <span id="audioCurrentTime">0:00</span>
+                        <span id="audioDuration">0:00</span>
+                    </div>
+                    <input type="range" id="audioSeekBar" min="0" max="100" value="0" oninput="seekAudio(this.value)" class="w-full accent-pink-500 cursor-pointer">
+                </div>
+
+                <!-- Điều khiển -->
+                <div class="flex items-center justify-center gap-3 pt-2">
+                    <button onclick="prevTrack()" class="p-2.5 rounded-xl surface-bg border subtle-border hover:opacity-80">⏮</button>
+                    <button onclick="togglePlayPause()" id="mainPlayBtn" class="w-12 h-12 rounded-full bg-pink-600 hover:bg-pink-500 text-white flex items-center justify-center text-base shadow-lg">▶</button>
+                    <button onclick="nextTrack()" class="p-2.5 rounded-xl surface-bg border subtle-border hover:opacity-80">⏭</button>
+                    <button onclick="toggleLoop()" id="loopBtn" class="p-2.5 rounded-xl surface-bg border subtle-border opacity-50 hover:opacity-100" title="Lặp lại">🔁</button>
+                </div>
+            </div>
+
+            <!-- Danh sách bài hát -->
+            <div>
+                <h3 class="text-xs font-bold muted-text uppercase tracking-wider mb-2">Danh sách bài hát</h3>
+                <div id="playlistContainer" class="space-y-1.5 max-h-48 overflow-y-auto"></div>
+            </div>
+            <audio id="bgAudioPlayer"></audio>
+        </section>
+
+        <!-- ================= TAB 5: SETTINGS (CÀI ĐẶT & GIAO DIỆN) ================= -->
+        <section id="viewSettings" class="hidden space-y-6">
+            <div>
+                <h2 class="text-lg font-bold">⚙️ Cài Đặt Giao Diện & Đọc Sách</h2>
+                <p class="text-xs muted-text">Tùy chỉnh màu sắc, phông chữ và kích thước chữ đọc</p>
+            </div>
+
+            <div class="space-y-4 text-xs">
+                <!-- Màu nền -->
+                <div class="p-4 rounded-2xl elevated-bg border subtle-border space-y-2">
+                    <label class="block font-semibold muted-text">Màu trang đọc</label>
+                    <div class="grid grid-cols-4 gap-2">
+                        <button onclick="setReaderTheme('dark')" class="py-2.5 rounded-xl bg-[#121316] text-gray-200 border border-gray-600 font-medium">Tối</button>
+                        <button onclick="setReaderTheme('sepia')" class="py-2.5 rounded-xl bg-[#f4ecd8] text-[#3b3226] border border-[#d4c49e] font-medium">Giấy</button>
+                        <button onclick="setReaderTheme('green')" class="py-2.5 rounded-xl bg-[#e4efe7] text-[#1f3328] border border-[#b4cebd] font-medium">Xanh</button>
+                        <button onclick="setReaderTheme('light')" class="py-2.5 rounded-xl bg-white text-slate-800 border border-slate-300 font-medium">Sáng</button>
+                    </div>
+                </div>
+
+                <!-- Phông chữ -->
+                <div class="p-4 rounded-2xl elevated-bg border subtle-border space-y-2">
+                    <label class="block font-semibold muted-text">Phông chữ tiếng Hàn</label>
+                    <select id="fontSelect" onchange="updateTypography()" class="w-full px-3 py-2.5 rounded-xl surface-bg border subtle-border outline-none">
+                        <option value="font-krBatang">Gowun Batang (Văn học mềm mại)</option>
+                        <option value="font-krSerif">Noto Serif KR (Sách in cổ điển)</option>
+                        <option value="font-krSans">Noto Sans KR (Hiện đại, rõ nét)</option>
+                        <option value="font-krDodum">Gowun Dodum (Nhẹ nhàng, dễ đọc)</option>
+                    </select>
+                </div>
+
+                <!-- Cỡ chữ & Giãn dòng -->
+                <div class="p-4 rounded-2xl elevated-bg border subtle-border space-y-3">
+                    <div>
+                        <div class="flex justify-between font-semibold muted-text mb-1">
+                            <span>Cỡ chữ</span>
+                            <span id="fontSizeVal">21px</span>
+                        </div>
+                        <input type="range" id="fontSizeRange" min="16" max="32" step="1" value="21" oninput="updateTypography()" class="w-full accent-emerald-500 cursor-pointer">
+                    </div>
+                    <div>
+                        <div class="flex justify-between font-semibold muted-text mb-1">
+                            <span>Khoảng cách dòng</span>
+                            <span id="lineHeightVal">2.0</span>
+                        </div>
+                        <input type="range" id="lineHeightRange" min="1.5" max="2.6" step="0.1" value="2.0" oninput="updateTypography()" class="w-full accent-emerald-500 cursor-pointer">
+                    </div>
+                </div>
+
+                <!-- Quiz cài đặt -->
+                <div class="p-4 rounded-2xl elevated-bg border subtle-border flex items-center justify-between">
+                    <div>
+                        <span class="font-semibold block">Kiểm tra nhanh từ vựng mỗi 5 phút</span>
+                        <span class="text-[11px] muted-text">Nhận thêm Hạt mặt trời (☀️) khi trả lời đúng</span>
+                    </div>
+                    <input type="checkbox" id="quizToggle" checked onchange="toggleQuizSetting(this.checked)" class="w-4 h-4 accent-emerald-500 rounded">
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ================= BOTTOM NAVIGATION BAR (CHUẨN APP DI ĐỘNG) ================= -->
+    <nav class="fixed bottom-0 left-0 right-0 z-30 surface-bg border-t subtle-border h-16 flex items-center justify-around px-2 shadow-2xl">
+        <button onclick="switchTab('read')" id="navBtn-read" class="flex flex-col items-center gap-1 py-1 px-3 rounded-xl text-emerald-400 transition">
+            <i data-lucide="book-open" class="w-5 h-5"></i>
+            <span class="text-[10px] font-medium">Đọc</span>
+        </button>
+        <button onclick="switchTab('library')" id="navBtn-library" class="flex flex-col items-center gap-1 py-1 px-3 rounded-xl muted-text hover:text-emerald-400 transition">
+            <i data-lucide="library" class="w-5 h-5"></i>
+            <span class="text-[10px] font-medium">Thư viện</span>
+        </button>
+        <button onclick="switchTab('garden')" id="navBtn-garden" class="flex flex-col items-center gap-1 py-1 px-3 rounded-xl muted-text hover:text-emerald-400 transition relative">
+            <i data-lucide="sprout" class="w-5 h-5"></i>
+            <span class="text-[10px] font-medium">Vườn cây</span>
+            <span id="navGardenDot" class="hidden absolute top-1 right-2 w-2 h-2 rounded-full bg-emerald-400"></span>
+        </button>
+        <button onclick="switchTab('music')" id="navBtn-music" class="flex flex-col items-center gap-1 py-1 px-3 rounded-xl muted-text hover:text-emerald-400 transition">
+            <i data-lucide="music" class="w-5 h-5"></i>
+            <span class="text-[10px] font-medium">Nhạc</span>
+        </button>
+        <button onclick="switchTab('settings')" id="navBtn-settings" class="flex flex-col items-center gap-1 py-1 px-3 rounded-xl muted-text hover:text-emerald-400 transition">
+            <i data-lucide="sliders" class="w-5 h-5"></i>
+            <span class="text-[10px] font-medium">Cài đặt</span>
+        </button>
+    </nav>
+
+    <!-- ================= FLOATING INLINE WORD POPOVER (AI TỪ ĐIỂN TẠI CHỖ) ================= -->
+    <div id="wordPopover" class="hidden fixed z-40 w-[92vw] max-w-sm surface-bg border subtle-border rounded-2xl shadow-2xl p-4 transition-all">
+        <div id="popoverArrow" class="w-3 h-3 surface-bg border-l border-t subtle-border rotate-45 absolute -top-1.5 left-6"></div>
+
+        <div class="flex items-start justify-between gap-2 pb-2.5 border-b subtle-border">
+            <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span id="popWord" class="text-xl font-bold font-krSans text-emerald-400"></span>
+                    <span id="popBaseForm" class="text-xs px-2 py-0.5 rounded-lg elevated-bg muted-text font-krSans"></span>
+                    <span id="popPos" class="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-medium"></span>
+                </div>
+                <p id="popMeaning" class="text-sm font-semibold mt-1"></p>
+            </div>
+            <div class="flex items-center gap-1 shrink-0">
+                <button onclick="retryAiExplanation()" class="p-1.5 rounded-lg elevated-bg hover:text-emerald-400 text-xs" title="Phân tích lại">🔄</button>
+                <button onclick="closePopover()" class="p-1.5 rounded-lg elevated-bg hover:text-rose-400 text-xs" title="Đóng">✕</button>
+            </div>
+        </div>
+
+        <div class="py-2.5 space-y-2 text-xs max-h-52 overflow-y-auto">
+            <div id="popLoading" class="flex items-center gap-2 py-4 justify-center muted-text">
+                <svg class="animate-spin h-4 w-4 text-emerald-400" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"></circle><path fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" class="opacity-75"></path></svg>
+                <span>AI đang phân tích từ trong câu...</span>
+            </div>
+            <div id="popResult" class="hidden space-y-2">
+                <div class="p-2.5 rounded-xl elevated-bg">
+                    <span class="font-semibold text-emerald-400 block mb-0.5">📐 Cấu trúc ngữ pháp:</span>
+                    <p id="popGrammar"></p>
+                </div>
+                <div class="p-2.5 rounded-xl elevated-bg">
+                    <span class="font-semibold text-sky-400 block mb-0.5">💬 Ví dụ:</span>
+                    <p id="popExample" class="font-krSans"></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="pt-2 border-t subtle-border">
+            <label class="text-[11px] font-semibold muted-text block mb-1">✍️ Ghi chú cá nhân:</label>
+            <div class="flex gap-1.5">
+                <input type="text" id="popNoteInput" placeholder="Ghi chú từ này..." class="flex-1 px-2.5 py-1.5 rounded-xl elevated-bg border subtle-border text-xs outline-none focus:border-emerald-500" onkeydown="if(event.key==='Enter') saveWordNote()">
+                <button onclick="saveWordNote()" class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-gray-950 font-semibold text-xs shrink-0">Lưu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 5-MINUTE QUIZ MODAL ================= -->
+    <div id="quizModal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="surface-bg border subtle-border rounded-3xl w-full max-w-md p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between">
+                <span class="px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 text-xs font-bold">⚡ Kiểm tra nhanh 5 phút</span>
+                <span class="text-xs muted-text">Đúng +1 ☀️ | Sai -1 phút</span>
+            </div>
+            <div>
+                <p class="text-xs muted-text mb-1">Từ bạn vừa tra nghĩa là gì?</p>
+                <h3 id="quizWordDisplay" class="text-2xl font-bold font-krSans text-emerald-400"></h3>
+            </div>
+            <div id="quizOptionsContainer" class="space-y-2"></div>
+            <div id="quizFeedback" class="hidden p-3 rounded-xl text-xs font-medium"></div>
+            <div class="flex justify-end pt-1">
+                <button id="quizContinueBtn" onclick="closeModal('quizModal')" class="hidden px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold">Tiếp tục đọc</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastContainer" class="fixed bottom-20 right-4 z-50 space-y-2 pointer-events-none"></div>
+
+    <script>
+        // =========================================================================
+        // PWA SETUP & SERVICE WORKER REGISTRATION (OFFLINE SUPPORT)
+        // =========================================================================
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('installPwaBtn').classList.remove('hidden');
+        });
+
+        async function installPWA() {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+                document.getElementById('installPwaBtn').classList.add('hidden');
+            }
+            deferredPrompt = null;
+        }
+
+        // Đăng ký Service Worker tối giản lưu cache chạy offline
+        if ('serviceWorker' in navigator) {
+            const swCode = `
+                self.addEventListener('install', e => { self.skipWaiting(); });
+                self.addEventListener('activate', e => { clients.claim(); });
+                self.addEventListener('fetch', e => { e.respondWith(fetch(e.request).catch(() => caches.match(e.request))); });
+            `;
+            const blob = new Blob([swCode], { type: 'text/javascript' });
+            const swUrl = URL.createObjectURL(blob);
+            navigator.serviceWorker.register(swUrl).catch(() => {});
+        }
+
+        // =========================================================================
+        // DỮ LIỆU & TRẠNG THÁI ỨNG DỤNG (LOCALSTORAGE)
+        // =========================================================================
+        const SAMPLE_STORIES = [
+            {
+                id: 'story-1',
+                title: '소나기 — Cơn mưa rào đầu hạ (Hwang Sun-won)',
+                category: 'Truyện ngắn',
+                content: `소년은 개울가에서 소녀를 보자 곧 윤 초시네 증손녀딸이라는 걸 알 수 있었다. 소녀는 개울에다 손을 잠그고 물장난을 하고 있는 것이다. 서울서는 이런 개울물을 보지 못하기나 한 듯이.
+
+벌써 며칠째 소녀는, 학교에서 돌아오는 길에 물장난이었다. 그런데 어제까지는 개울 기슭에서 하더니, 오늘은 징검다리 한가운데 앉아서 하고 있다.
+
+소년은 개울둑에 앉아 버렸다. 소녀가 비켜서기를 기다리자는 것이다. 요행 지나가는 사람이 있어, 소녀가 길을 비켜 주었다.`,
+                progress: 0
+            },
+            {
+                id: 'story-2',
+                title: '밤하늘의 별을 세는 고양이 — Mèo đếm sao đêm',
+                category: 'Cổ tích',
+                content: `작은 마을의 가장 높은 지붕 위에는 매일 밤 올라가는 하얀 고양이가 있었습니다. 고양이는 반짝이는 별들을 하나씩 세면서 자신의 잃어버린 기억을 찾고 있었죠.
+
+어느 날, 바람이 부드럽게 불어오던 밤에 작은 반딧불이 한 마리가 고양이의 코끝에 앉았습니다. "너는 왜 매일 밤 하늘만 바라보니?" 반딧불이가 조심스럽게 물었습니다.`,
+                progress: 0
+            }
+        ];
+
+        const PLANTS_CONFIG = [
+            { id: 0, name: 'Hoa Anh Thảo', emoji: '🌼', waterReq: 5, sunReq: 10, desc: 'Nở trong chiều tà, tượng trưng cho khởi đầu kiên nhẫn.', color: '#facc15' },
+            { id: 1, name: 'Hoa Hồng Nhung', emoji: '🌹', waterReq: 10, sunReq: 10, desc: 'Đóa hồng rực rỡ cần chăm chút mỗi ngày.', color: '#f43f5e' },
+            { id: 2, name: 'Cỏ Bốn Lá', emoji: '🍀', waterReq: 15, sunReq: 10, desc: 'Biểu tượng của sự may mắn khi chinh phục từ vựng mới.', color: '#10b981' },
+            { id: 3, name: 'Cây Hoa Anh Đào', emoji: '🌸', waterReq: 20, sunReq: 10, desc: 'Tán hoa anh đào hồng phấn tung bay thơ mộng.', color: '#f472b6' },
+            { id: 4, name: 'Cây Ngô Đồng', emoji: '🌳', waterReq: 25, sunReq: 10, desc: 'Loài cây cao quý trong văn hóa Á Đông.', color: '#8b5cf6' },
+            { id: 5, name: 'Cổ Thụ Ánh Sao', emoji: '✨', waterReq: 30, sunReq: 10, desc: 'Cây huyền thoại kết tinh từ hàng trăm trang sách.', color: '#38bdf8' }
+        ];
+
+        const STORAGE_KEY = 'vuon_chu_pwa_state_v2';
+        let appState = {
+            stories: [],
+            currentStoryId: null,
+            vocabBank: {},
+            settings: { theme: 'dark', fontFamily: 'font-krBatang', fontSize: 21, lineHeight: 2.0, quizEnabled: true },
+            garden: {
+                waterDrops: 1,
+                sunSeeds: 1,
+                readingSeconds: 0,
+                lookupCounter: 0,
+                activePlantIndex: 0,
+                plantsProgress: PLANTS_CONFIG.map((_, i) => ({ unlocked: i === 0, waterFed: 0, sunFed: 0, completed: false }))
+            }
+        };
+
+        function loadState() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    appState = { ...appState, ...parsed, settings: { ...appState.settings, ...(parsed.settings || {}) }, garden: { ...appState.garden, ...(parsed.garden || {}) } };
+                }
+            } catch (e) {}
+            if (!appState.stories || appState.stories.length === 0) appState.stories = [...SAMPLE_STORIES];
+            if (!appState.currentStoryId || !appState.stories.find(s => s.id === appState.currentStoryId)) {
+                appState.currentStoryId = appState.stories[0].id;
+            }
+        }
+
+        function saveState() {
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(appState)); } catch (e) {}
+        }
+
+        // =========================================================================
+        // TAB NAVIGATION
+        // =========================================================================
+        let currentTab = 'read';
+        function switchTab(tabId) {
+            currentTab = tabId;
+            ['read', 'library', 'garden', 'music', 'settings'].forEach(id => {
+                document.getElementById(`view${id.charAt(0).toUpperCase() + id.slice(1)}`).classList.toggle('hidden', id !== tabId);
+                const btn = document.getElementById(`navBtn-${id}`);
+                if (btn) {
+                    btn.className = `flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition ${id === tabId ? 'text-emerald-400 font-bold' : 'muted-text hover:text-emerald-400'}`;
+                }
+            });
+
+            if (tabId === 'library') renderLibrary();
+            if (tabId === 'garden') renderGarden();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // =========================================================================
+        // READER & AI WORD POPUP
+        // =========================================================================
+        let activeWordEl = null;
+        let currentWord = '', currentSentence = '';
+
+        function getCurrentStory() {
+            return appState.stories.find(s => s.id === appState.currentStoryId) || appState.stories[0];
+        }
+
+        function renderReader() {
+            const story = getCurrentStory();
+            if (!story) return;
+
+            document.getElementById('headerStoryTitle').textContent = story.title;
+            document.getElementById('articleMainTitle').textContent = story.title;
+            document.getElementById('readCategoryBadge').textContent = story.category || 'Truyện ngắn';
+
+            const container = document.getElementById('readerContent');
+            container.innerHTML = '';
+            let lookups = 0;
+
+            story.content.split(/\n+/).forEach(para => {
+                const trimmed = para.trim();
+                if (!trimmed) return;
+                const p = document.createElement('p');
+                p.className = 'mb-6';
+
+                trimmed.split(/(\s+)/).forEach(token => {
+                    if (/^\s+$/.test(token)) {
+                        p.appendChild(document.createTextNode(token));
+                        return;
+                    }
+                    if (!/[\uAC00-\uD7A3]/.test(token)) {
+                        p.appendChild(document.createTextNode(token));
+                        return;
+                    }
+
+                    const match = token.match(/^([^\uAC00-\uD7A3a-zA-Z0-9]*)(.+?)([^\uAC00-\uD7A3a-zA-Z0-9]*)$/);
+                    const prefix = match ? match[1] : '';
+                    const core = match ? match[2] : token;
+                    const suffix = match ? match[3] : '';
+
+                    if (prefix) p.appendChild(document.createTextNode(prefix));
+
+                    const span = document.createElement('span');
+                    span.textContent = core;
+                    span.className = 'kr-word';
+                    span.dataset.word = core;
+
+                    const saved = appState.vocabBank[core];
+                    if (saved) {
+                        span.classList.add('looked-up');
+                        lookups++;
+                        if (saved.note) span.classList.add('has-note');
+                    }
+
+                    span.onclick = (e) => {
+                        e.stopPropagation();
+                        handleWordClick(span, core, trimmed);
+                    };
+
+                    p.appendChild(span);
+                    if (suffix) p.appendChild(document.createTextNode(suffix));
+                });
+                container.appendChild(p);
+            });
+
+            document.getElementById('storyLookupCount').textContent = lookups;
+            updateScrollProgress();
+        }
+
+        function updateScrollProgress() {
+            const st = window.scrollY, dh = document.documentElement.scrollHeight - window.innerHeight;
+            const pct = dh <= 0 ? 100 : Math.min(100, Math.max(0, Math.round((st / dh) * 100)));
+            document.getElementById('readProgressText').textContent = `${pct}%`;
+            const story = getCurrentStory();
+            if (story && pct > (story.progress || 0)) {
+                story.progress = pct;
+                saveState();
+            }
+        }
+        window.addEventListener('scroll', updateScrollProgress, { passive: true });
+
+        function positionPopover(el) {
+            const pop = document.getElementById('wordPopover');
+            pop.classList.remove('hidden');
+            const rect = el.getBoundingClientRect();
+            const popRect = pop.getBoundingClientRect();
+            let left = rect.left + rect.width / 2 - popRect.width / 2;
+            left = Math.max(10, Math.min(window.innerWidth - popRect.width - 10, left));
+            let top = rect.bottom + 10;
+            if (top + popRect.height > window.innerHeight) top = rect.top - popRect.height - 10;
+
+            pop.style.left = `${left}px`;
+            pop.style.top = `${Math.max(60, top)}px`;
+        }
+
+        async function handleWordClick(spanEl, word, sentence) {
+            if (activeWordEl) activeWordEl.classList.remove('active-word');
+            activeWordEl = spanEl;
+            activeWordEl.classList.add('active-word');
+            currentWord = word;
+            currentSentence = sentence;
+
+            registerLookup();
+
+            const existing = appState.vocabBank[word];
+            document.getElementById('popWord').textContent = word;
+            document.getElementById('popNoteInput').value = existing?.note || '';
+
+            if (existing && existing.meaning) {
+                renderPopoverData(existing);
+                positionPopover(spanEl);
+                return;
+            }
+
+            document.getElementById('popBaseForm').textContent = 'Đang phân tích...';
+            document.getElementById('popPos').textContent = 'AI';
+            document.getElementById('popMeaning').textContent = '';
+            document.getElementById('popLoading').classList.remove('hidden');
+            document.getElementById('popResult').classList.add('hidden');
+            positionPopover(spanEl);
+
+            await fetchAiWord(word, sentence, spanEl);
+        }
+
+        function renderPopoverData(data) {
+            document.getElementById('popLoading').classList.add('hidden');
+            document.getElementById('popResult').classList.remove('hidden');
+            document.getElementById('popBaseForm').textContent = data.baseForm ? `Nguyên thể: ${data.baseForm}` : '';
+            document.getElementById('popPos').textContent = data.pos || 'Từ vựng';
+            document.getElementById('popMeaning').textContent = data.meaning || 'Chưa rõ nghĩa';
+            document.getElementById('popGrammar').textContent = data.grammar || 'Không có cấu trúc phức tạp.';
+            document.getElementById('popExample').textContent = data.example || '';
+        }
+
+        async function retryAiExplanation() {
+            if (!currentWord || !activeWordEl) return;
+            document.getElementById('popLoading').classList.remove('hidden');
+            document.getElementById('popResult').classList.add('hidden');
+            await fetchAiWord(currentWord, currentSentence, activeWordEl);
+        }
+
+        async function fetchAiWord(word, sentence, spanEl) {
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+            const prompt = `Từ: "${word}"\nCâu: "${sentence}"\nGiải thích tiếng Việt, dạng nguyên thể, từ loại, ngữ pháp tiểu từ và 1 câu ví dụ. JSON schema: baseForm, pos, meaning, grammar, example.`;
+
+            try {
+                const res = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        contents: [{parts: [{text: prompt}]}],
+                        systemInstruction: {parts: [{text: "Bạn là giáo viên tiếng Hàn. Trả về JSON chuẩn tiếng Việt."}]},
+                        generationConfig: {
+                            responseMimeType: "application/json",
+                            responseSchema: {
+                                type: "OBJECT",
+                                properties: {
+                                    baseForm: {type: "STRING"}, pos: {type: "STRING"},
+                                    meaning: {type: "STRING"}, grammar: {type: "STRING"}, example: {type: "STRING"}
+                                },
+                                required: ["baseForm", "pos", "meaning", "grammar", "example"]
+                            }
+                        }
+                    })
+                });
+                const data = await res.json();
+                const parsed = JSON.parse(data.candidates[0].content.parts[0].text);
+                appState.vocabBank[word] = { word, ...parsed, note: appState.vocabBank[word]?.note || '' };
+                saveState();
+
+                document.querySelectorAll(`.kr-word[data-word="${CSS.escape(word)}"]`).forEach(el => el.classList.add('looked-up'));
+                renderPopoverData(appState.vocabBank[word]);
+                positionPopover(spanEl);
+            } catch (e) {
+                const fallback = { word, baseForm: word, pos: 'Từ vựng', meaning: 'Lỗi kết nối AI - Vui lòng thử lại', grammar: '', example: '', note: '' };
+                renderPopoverData(fallback);
+                positionPopover(spanEl);
+            }
+        }
+
+        function saveWordNote() {
+            if (!currentWord) return;
+            const note = document.getElementById('popNoteInput').value.trim();
+            if (!appState.vocabBank[currentWord]) appState.vocabBank[currentWord] = { word: currentWord, meaning: '' };
+            appState.vocabBank[currentWord].note = note;
+            saveState();
+
+            document.querySelectorAll(`.kr-word[data-word="${CSS.escape(currentWord)}"]`).forEach(el => {
+                el.classList.add('looked-up');
+                if (note) el.classList.add('has-note'); else el.classList.remove('has-note');
+            });
+            showToast(note ? 'Đã lưu ghi chú ✍️' : 'Đã xóa ghi chú');
+        }
+
+        function closePopover() {
+            document.getElementById('wordPopover').classList.add('hidden');
+            if (activeWordEl) { activeWordEl.classList.remove('active-word'); activeWordEl = null; }
+        }
+
+        document.addEventListener('click', (e) => {
+            const pop = document.getElementById('wordPopover');
+            if (!pop.classList.contains('hidden') && !pop.contains(e.target)) closePopover();
+        });
+
+        // =========================================================================
+        // TIMERS, WATER, SUN & QUIZ
+        // =========================================================================
+        function updateUIResources() {
+            document.getElementById('waterCount').textContent = appState.garden.waterDrops;
+            document.getElementById('sunCount').textContent = appState.garden.sunSeeds;
+            document.getElementById('gardenWaterCount').textContent = appState.garden.waterDrops;
+            document.getElementById('gardenSunCount').textContent = appState.garden.sunSeeds;
+            const dot = document.getElementById('navGardenDot');
+            if (appState.garden.waterDrops > 0 || appState.garden.sunSeeds > 0) dot.classList.remove('hidden');
+            else dot.classList.add('hidden');
+        }
+
+        function registerLookup() {
+            appState.garden.lookupCounter++;
+            if (appState.garden.lookupCounter >= 10) {
+                appState.garden.lookupCounter = 0;
+                appState.garden.sunSeeds++;
+                showToast('☀️ Tra 10 từ: +1 Hạt mặt trời!');
+            }
+            saveState();
+            updateUIResources();
+        }
+
+        // Đếm thời gian đọc 5 phút
+        setInterval(() => {
+            if (document.hidden) return;
+            appState.garden.readingSeconds++;
+            if (appState.garden.readingSeconds >= 300) {
+                appState.garden.readingSeconds = 0;
+                appState.garden.waterDrops++;
+                showToast('💧 Đọc đủ 5 phút! +1 Giọt nước!');
+                triggerQuiz();
+            }
+            if (appState.garden.readingSeconds % 10 === 0) saveState();
+            updateUIResources();
+        }, 1000);
+
+        function triggerQuiz() {
+            if (!appState.settings.quizEnabled) return;
+            const entries = Object.values(appState.vocabBank).filter(v => v.meaning);
+            if (entries.length === 0) return;
+            const target = entries[Math.floor(Math.random() * entries.length)];
+            const pool = ['Cảm thấy bình yên', 'Bước đi vội vã', 'Ngắm nhìn bầu trời', 'Chờ đợi ai đó'];
+            const opts = [target.meaning, ...pool.filter(m => m !== target.meaning)].sort(() => 0.5 - Math.random()).slice(0, 4);
+
+            document.getElementById('quizWordDisplay').textContent = target.word;
+            const container = document.getElementById('quizOptionsContainer');
+            container.innerHTML = '';
+            const feedback = document.getElementById('quizFeedback');
+            feedback.classList.add('hidden');
+            document.getElementById('quizContinueBtn').classList.add('hidden');
+
+            opts.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'w-full text-left p-3 rounded-xl elevated-bg border subtle-border text-xs font-medium hover:border-emerald-500 transition';
+                btn.textContent = opt;
+                btn.onclick = () => {
+                    Array.from(container.children).forEach(b => b.disabled = true);
+                    if (opt === target.meaning) {
+                        btn.classList.add('border-emerald-500', 'bg-emerald-500/20', 'text-emerald-300');
+                        appState.garden.sunSeeds++;
+                        feedback.className = 'p-3 rounded-xl text-xs font-medium bg-emerald-500/20 text-emerald-300';
+                        feedback.textContent = '🎉 Chính xác! +1 ☀️';
+                    } else {
+                        btn.classList.add('border-rose-500', 'bg-rose-500/20', 'text-rose-300');
+                        appState.garden.readingSeconds = Math.max(0, appState.garden.readingSeconds - 60);
+                        feedback.className = 'p-3 rounded-xl text-xs font-medium bg-rose-500/20 text-rose-300';
+                        feedback.textContent = `❌ Sai (-1 phút). Nghĩa: "${target.meaning}"`;
+                    }
+                    feedback.classList.remove('hidden');
+                    document.getElementById('quizContinueBtn').classList.remove('hidden');
+                    saveState();
+                    updateUIResources();
+                };
+                container.appendChild(btn);
+            });
+            document.getElementById('quizModal').classList.remove('hidden');
+        }
+
+        // =========================================================================
+        // GARDEN & 6 PLANTS
+        // =========================================================================
+        function getPlantSvg(config, stage) {
+            const c = config.color;
+            if (stage === 1) return `<svg viewBox="0 0 120 120" class="w-32 h-32"><ellipse cx="60" cy="95" rx="30" ry="8" fill="#5c4033"/><path d="M35 95 L42 115 L78 115 L85 95 Z" fill="#9a5b3c"/><circle cx="60" cy="91" r="6" fill="${c}"/></svg>`;
+            if (stage === 2) return `<svg viewBox="0 0 120 120" class="w-32 h-32"><path d="M35 95 L42 115 L78 115 L85 95 Z" fill="#9a5b3c"/><path d="M60 95 L60 65" stroke="#10b981" stroke-width="4" stroke-linecap="round"/><path d="M60 75 Q45 65 44 75 Q52 82 60 75" fill="#34d399"/><path d="M60 70 Q75 60 76 70 Q68 78 60 70" fill="#34d399"/></svg>`;
+            if (stage === 3) return `<svg viewBox="0 0 120 120" class="w-32 h-32"><path d="M35 95 L42 115 L78 115 L85 95 Z" fill="#9a5b3c"/><path d="M60 95 Q57 68 60 42" stroke="#059669" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M59 78 Q38 68 36 78 Q48 85 59 78" fill="#10b981"/><path d="M60 65 Q82 55 84 65 Q72 72 60 65" fill="#10b981"/><circle cx="60" cy="38" r="7" fill="${c}"/></svg>`;
+            return `<svg viewBox="0 0 120 120" class="w-32 h-32"><path d="M35 95 L42 115 L78 115 L85 95 Z" fill="#9a5b3c"/><path d="M60 95 Q57 64 60 35" stroke="#059669" stroke-width="5" fill="none" stroke-linecap="round"/><circle cx="60" cy="22" r="10" fill="${c}"/><circle cx="72" cy="32" r="9" fill="${c}"/><circle cx="48" cy="32" r="9" fill="${c}"/><circle cx="60" cy="33" r="6" fill="#fef08a"/></svg>`;
+        }
+
+        function renderGarden() {
+            const idx = appState.garden.activePlantIndex;
+            const plant = PLANTS_CONFIG[idx];
+            const prog = appState.garden.plantsProgress[idx];
+            const stage = prog.completed ? 4 : (prog.waterFed > 0 || prog.sunFed > 0 ? 3 : 1);
+
+            document.getElementById('activePlantOrder').textContent = `Cây #${idx + 1} / 6`;
+            document.getElementById('activePlantName', '').textContent = `${plant.emoji} ${plant.name}`;
+            document.getElementById('activePlantDesc').textContent = plant.desc;
+            document.getElementById('plantStageBadge').textContent = prog.completed ? '✨ Trưởng thành' : `Giai đoạn ${stage}/4`;
+            document.getElementById('plantIllustration').innerHTML = getPlantSvg(plant, stage);
+            document.getElementById('plantStatusCaption').textContent = prog.completed ? 'Cây đã nở rực rỡ!' : 'Đang phát triển từng ngày...';
+
+            document.getElementById('plantWaterText').textContent = `${prog.waterFed} / ${plant.waterReq}`;
+            document.getElementById('plantWaterBar').style.width = `${Math.min(100, (prog.waterFed / plant.waterReq) * 100)}%`;
+            document.getElementById('plantSunText').textContent = `${prog.sunFed} / ${plant.sunReq}`;
+            document.getElementById('plantSunBar').style.width = `${Math.min(100, (prog.sunFed / plant.sunReq) * 100)}%`;
+
+            document.getElementById('availWater').textContent = appState.garden.waterDrops;
+            document.getElementById('availSun').textContent = appState.garden.sunSeeds;
+            document.getElementById('btnWater').disabled = appState.garden.waterDrops <= 0 || prog.waterFed >= plant.waterReq;
+            document.getElementById('btnSun').disabled = appState.garden.sunSeeds <= 0 || prog.sunFed >= plant.sunReq;
+
+            const grid = document.getElementById('plantCollectionGrid');
+            grid.innerHTML = '';
+            PLANTS_CONFIG.forEach((p, i) => {
+                const pProg = appState.garden.plantsProgress[i];
+                const isCur = i === idx;
+                const card = document.createElement('button');
+                card.disabled = !pProg.unlocked;
+                card.onclick = () => { appState.garden.activePlantIndex = i; saveState(); renderGarden(); };
+                card.className = `p-3 rounded-2xl border text-left transition ${isCur ? 'border-emerald-500 bg-emerald-500/15' : pProg.unlocked ? 'elevated-bg subtle-border' : 'surface-bg opacity-40 cursor-not-allowed'}`;
+                card.innerHTML = `<div class="flex justify-between items-center mb-1"><span class="text-xl">${pProg.unlocked ? p.emoji : '🔒'}</span><span class="text-[10px]">${pProg.completed ? '✨' : ''}</span></div><p class="text-xs font-bold truncate">${pProg.unlocked ? p.name : `Khóa #${i+1}`}</p>`;
+                grid.appendChild(card);
+            });
+            updateUIResources();
+        }
+
+        function feedPlant(type) {
+            const idx = appState.garden.activePlantIndex;
+            const plant = PLANTS_CONFIG[idx];
+            const prog = appState.garden.plantsProgress[idx];
+
+            if (type === 'water' && appState.garden.waterDrops > 0 && prog.waterFed < plant.waterReq) {
+                appState.garden.waterDrops--; prog.waterFed++;
+            } else if (type === 'sun' && appState.garden.sunSeeds > 0 && prog.sunFed < plant.sunReq) {
+                appState.garden.sunSeeds--; prog.sunFed++;
+            }
+
+            if (!prog.completed && prog.waterFed >= plant.waterReq && prog.sunFed >= plant.sunReq) {
+                prog.completed = true;
+                showToast(`🎊 ${plant.name} đã nở hoa!`);
+                if (idx + 1 < PLANTS_CONFIG.length) {
+                    appState.garden.plantsProgress[idx + 1].unlocked = true;
+                    appState.garden.activePlantIndex = idx + 1;
+                    showToast(`🌱 Đã mở khóa cây mới: ${PLANTS_CONFIG[idx + 1].name}!`);
+                }
+            }
+            saveState();
+            renderGarden();
+        }
+
+        // =========================================================================
+        // LIBRARY & MUSIC PLAYER
+        // =========================================================================
+        function renderLibrary() {
+            const container = document.getElementById('storyListContainer');
+            document.getElementById('libraryStoryCount').textContent = appState.stories.length;
+            container.innerHTML = '';
+
+            appState.stories.forEach(story => {
+                const isCur = story.id === appState.currentStoryId;
+                const card = document.createElement('div');
+                card.className = `p-4 rounded-2xl border flex flex-col justify-between gap-3 ${isCur ? 'border-emerald-500 bg-emerald-500/10' : 'elevated-bg subtle-border'}`;
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between"><h4 class="text-sm font-bold truncate">${story.title}</h4>${isCur ? '<span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500 text-white font-semibold">Đang đọc</span>' : ''}</div>
+                        <p class="text-xs muted-text line-clamp-2 mt-1 font-krSans">${story.content.slice(0, 80)}...</p>
+                    </div>
+                    <div class="flex justify-between items-center pt-2 border-t subtle-border text-xs">
+                        <span class="muted-text">Tiến độ: <strong class="text-emerald-400">${story.progress || 0}%</strong></span>
+                        <div class="flex gap-1.5">
+                            <button onclick="selectStory('${story.id}')" class="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold">Đọc</button>
+                            ${appState.stories.length > 1 ? `<button onclick="deleteStory('${story.id}')" class="p-1 hover:text-rose-400">🗑️</button>` : ''}
+                        </div>
+                    </div>`;
+                container.appendChild(card);
+            });
+        }
+
+        function selectStory(id) {
+            appState.currentStoryId = id;
+            saveState();
+            renderReader();
+            switchTab('read');
+        }
+
+        function deleteStory(id) {
+            appState.stories = appState.stories.filter(s => s.id !== id);
+            if (appState.currentStoryId === id && appState.stories.length > 0) appState.currentStoryId = appState.stories[0].id;
+            saveState();
+            renderLibrary();
+            renderReader();
+            showToast('Đã xóa truyện');
+        }
+
+        function addNewStory() {
+            const title = document.getElementById('newStoryTitle').value.trim() || `Truyện #${appState.stories.length + 1}`;
+            const content = document.getElementById('newStoryContent').value.trim();
+            if (!content) { showToast('Vui lòng nhập nội dung!'); return; }
+
+            const newS = { id: 'story-' + Date.now(), title, category: 'Tự thêm', content, progress: 0 };
+            appState.stories.unshift(newS);
+            appState.currentStoryId = newS.id;
+            saveState();
+            document.getElementById('newStoryTitle').value = '';
+            document.getElementById('newStoryContent').value = '';
+            renderReader();
+            switchTab('read');
+            showToast('✨ Đã thêm truyện mới!');
+        }
+
+        function handleStoryFile(e) {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                document.getElementById('newStoryContent').value = evt.target.result;
+                document.getElementById('newStoryTitle').value = file.name.replace(/\.[^/.]+$/, '');
+                showToast(`Đã tải file "${file.name}"`);
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        // Trình phát nhạc
+        let playlist = [], currentTrack = 0;
+        const audio = document.getElementById('bgAudioPlayer');
+
+        function handleAudioFiles(e) {
+            const files = Array.from(e.target.files || []);
+            files.forEach(f => playlist.push({ name: f.name.replace(/\.[^/.]+$/, ''), url: URL.createObjectURL(f) }));
+            renderPlaylist();
+            if (audio.paused && playlist.length === files.length) playTrack(0);
+            showToast(`Đã thêm ${files.length} bài nhạc`);
+        }
+
+        function playTrack(idx) {
+            if (playlist.length === 0) return;
+            currentTrack = (idx + playlist.length) % playlist.length;
+            const t = playlist[currentTrack];
+            audio.src = t.url;
+            audio.play();
+            document.getElementById('currentTrackDisplay').textContent = `🎵 ${t.name}`;
+            document.getElementById('mainPlayBtn').textContent = '⏸';
+            renderPlaylist();
+        }
+
+        function togglePlayPause() {
+            if (playlist.length === 0) { document.getElementById('audioFileInput').click(); return; }
+            if (audio.paused) { audio.play(); document.getElementById('mainPlayBtn').textContent = '⏸'; }
+            else { audio.pause(); document.getElementById('mainPlayBtn').textContent = '▶'; }
+        }
+
+        function nextTrack() { playTrack(currentTrack + 1); }
+        function prevTrack() { playTrack(currentTrack - 1); }
+        function toggleLoop() { audio.loop = !audio.loop; document.getElementById('loopBtn').classList.toggle('opacity-100', audio.loop); }
+        function seekAudio(val) { audio.currentTime = (val / 100) * audio.duration; }
+
+        audio.addEventListener('timeupdate', () => {
+            if (audio.duration) {
+                document.getElementById('audioSeekBar').value = (audio.currentTime / audio.duration) * 100;
+                document.getElementById('audioCurrentTime').textContent = formatTime(audio.currentTime);
+                document.getElementById('audioDuration').textContent = formatTime(audio.duration);
+            }
+        });
+        audio.addEventListener('ended', nextTrack);
+
+        function formatTime(sec) {
+            const m = Math.floor(sec / 60), s = Math.floor(sec % 60);
+            return `${m}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function renderPlaylist() {
+            const c = document.getElementById('playlistContainer');
+            document.getElementById('playlistInfo').textContent = `${playlist.length} bài hát`;
+            c.innerHTML = '';
+            playlist.forEach((t, i) => {
+                const item = document.createElement('div');
+                item.className = `p-2.5 rounded-xl flex items-center justify-between text-xs ${i === currentTrack ? 'bg-pink-500/20 text-pink-400 font-bold' : 'elevated-bg'}`;
+                item.innerHTML = `<span>${t.name}</span><button onclick="playTrack(${i})" class="px-2 py-1 rounded bg-pink-600 text-white">Phát</button>`;
+                c.appendChild(item);
+            });
+        }
+
+        // =========================================================================
+        // SETTINGS & TOAST
+        // =========================================================================
+        function setReaderTheme(theme) {
+            appState.settings.theme = theme;
+            document.body.className = `theme-${theme} app-bg min-h-screen flex flex-col selection:bg-emerald-500/30 pb-20 sm:pb-0`;
+            saveState();
+        }
+
+        function updateTypography() {
+            const font = document.getElementById('fontSelect').value;
+            const size = document.getElementById('fontSizeRange').value;
+            const line = document.getElementById('lineHeightRange').value;
+            appState.settings = { ...appState.settings, fontFamily: font, fontSize: Number(size), lineHeight: Number(line) };
+            document.getElementById('fontSizeVal').textContent = `${size}px`;
+            document.getElementById('lineHeightVal').textContent = line;
+
+            const reader = document.getElementById('readerContent');
+            reader.className = `${font} select-text break-keep pb-12 transition-all`;
+            reader.style.fontSize = `${size}px`;
+            reader.style.lineHeight = line;
+            saveState();
+        }
+
+        function toggleQuizSetting(val) {
+            appState.settings.quizEnabled = val;
+            saveState();
+            showToast(val ? 'Đã bật kiểm tra 5 phút' : 'Đã tắt kiểm tra 5 phút');
+        }
+
+        function applySettings() {
+            setReaderTheme(appState.settings.theme);
+            document.getElementById('fontSelect').value = appState.settings.fontFamily;
+            document.getElementById('fontSizeRange').value = appState.settings.fontSize;
+            document.getElementById('lineHeightRange').value = appState.settings.lineHeight;
+            document.getElementById('quizToggle').checked = appState.settings.quizEnabled;
+            updateTypography();
+        }
+
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+        function showToast(msg) {
+            const container = document.getElementById('toastContainer');
+            const t = document.createElement('div');
+            t.className = 'surface-bg border subtle-border px-4 py-2.5 rounded-2xl shadow-xl text-xs font-medium';
+            t.textContent = msg;
+            container.appendChild(t);
+            setTimeout(() => t.remove(), 3200);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadState();
+            applySettings();
+            renderReader();
+            updateUIResources();
+            if (window.lucide) lucide.createIcons();
+        });
+    </script>
+</body>
+</html>
